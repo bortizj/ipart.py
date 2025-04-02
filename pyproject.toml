@@ -1,0 +1,6 @@
+[project]
+name = "ipart"
+version = "0.0.0"
+
+[tool.setuptools.packages.find]
+include = ["ipart"]
