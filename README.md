@@ -32,10 +32,13 @@ Once you have your environment setup you can install the package and its require
 ```shell
 pip install numpy==1.26.4 opencv-python==4.10.0.84 tqdm packaging psutil
 ```
+- You may also want to have [matplotlib](https://matplotlib.org/stable/install/index.html) for some debugging
+```shell
+conda install matplotlib
+```
 and
 - the package itself
 ```shell
 cd path/to/repo/ipart.py
 pip install -e .
 ```
-
