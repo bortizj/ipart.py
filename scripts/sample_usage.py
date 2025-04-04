@@ -31,4 +31,4 @@ if __name__ == "__main__":
         img = cv2.imread(str(path_img))
 
         gol = GameOfLife(path_img)
-        gol.play(path_vid)
+        gol.play(None)

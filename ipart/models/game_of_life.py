@@ -105,7 +105,8 @@ class GameOfLife:
         """
         Plays the Game of Life algorithm for a given number of generations.
         """
-        gif = GIFVideoMaker(str(path_gif))
+        if path_gif is not None:
+            gif = GIFVideoMaker(str(path_gif))
         tqdm_loop = tqdm(range(num_generations), desc="Game of Life")
 
         gen_error = []
@@ -119,7 +120,8 @@ class GameOfLife:
             temp = cv2.cvtColor(self.img_now, cv2.COLOR_Lab2BGR)
 
             # Appends the current generation to the gif
-            gif.append_frame(temp)
+            if path_gif is not None:
+                gif.append_frame(temp)
 
             # Displaying the current generation
             if display:
@@ -138,7 +140,8 @@ class GameOfLife:
 
         cv2.destroyAllWindows()
 
-        gif.make_gif_video()
+        if path_gif is not None:
+            gif.make_gif_video()
 
     def measure_generational_error(self):
         """
