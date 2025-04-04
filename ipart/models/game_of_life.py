@@ -32,19 +32,37 @@ class GameOfLife:
             if populated pixel is surrounded by n - k or fewer, the pixel becomes unpopulated next generation
         Death by overpopulation:
             if populated pixel is surrounded by n + k or more, the pixel becomes unpopulated next generation
+    Modification for color images:
+        The distance between the pixel and the neighborhood is calculated using the euclidean distance in the given color space.
+        The neighborhood is defined as the average of the pixels in the neighborhood.
+        The standard deviation of the neighborhood is calculated using the average of the pixels in the neighborhood.
+        Underpopulated:
+            if the standard deviation of the neighborhood is less than sigma[0]
+        Overpopulation:
+            if the standard deviation of the neighborhood is greater than sigma[1], the pixel will die
+        Death:
+            The pixel will die if the distance between the pixel and the neighborhood is greater than mu.
+        Death:
+            The pixel will die if the neighborhood is overpopulated.
+        Birth:
+            The pixel will be born if the distance between the pixel and the neighborhood is less than mu or is dead
+            and the neighborhood is underpopulated.
+
+        Death: set to a random color
+        Birth: set to the average of the neighborhood + noise
     """
 
     def __init__(
         self,
         in_bgr: Path,
         wsize: int = 3,
+        dead_th: float = 1e-3,
         mu: float = 10,
-        sigma: tuple[float, float] = (1, 50),
-        dead_th: float = 1e-5,
+        sigma: tuple[float, float] = (5, 50),
         tgt_size: tuple[int, int] = (360, 360),
+        add_noise: tuple[float, float] = (5 / 255, 0.01),
         color_space: str = "Lab",
         rng_seed: int = 42,
-        add_noise: tuple[float, float] = (5 / 255, 0.005),
     ):
         # Create a random number generator with a seed, adds "predictable" uncertainty to the algorithm
         self.rng = np.random.default_rng(seed=rng_seed)
@@ -72,15 +90,20 @@ class GameOfLife:
         self.img_now = self.img_now.astype("float32") / 255.0
         self.add_randomness(add_noise)
 
-        # Creating a list of random colors to be used in the algorithm
-        self.colors = self.rng.normal(0, 1, self.img_now.shape).astype("float32")
-
         # Converting to CIELAB color space for better color distance calculations
         if color_space == "Lab":
             self.img_now = cv2.cvtColor(self.img_now, cv2.COLOR_BGR2Lab)
-            self.colors = cv2.cvtColor(self.colors, cv2.COLOR_BGR2Lab)
 
-    def add_randomness(self, add_noise):
+    def segment_image(self):
+        """
+        Segments the image using kmeans clustering.
+        """
+        pass
+
+    def add_randomness(self, add_noise: list[float, float]):
+        """
+        Adds randomness to the image by adding gaussian noise and salt and pepper noise.
+        """
         # Adding gaussian noise to the image
         self.img_now = self.img_now + self.rng.normal(0, add_noise[0], self.img_now.shape).astype("float32")
 
@@ -105,40 +128,37 @@ class GameOfLife:
         # Initializing the next generation image
         img_next = self.img_now.copy()
 
+        # Getting pixels that are dead in the current generation
+        currently_dead = np.sum(np.abs(self.img_now), axis=2) <= self.dead_th
+
         # Filtering the image to get the average of the neighborhood per channel
         ex1_nei = cv2.filter2D(self.img_now, -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
         ex2_nei = cv2.filter2D(cv2.pow(self.img_now, 2), -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
 
-        # Verifying if the pixel is alive or not:
+        # Verifying if the pixel will be alive or not:
         # the pixel is alive if is similar to the neighborhood |pixel - avg_n| <= mu
         # here the distance will be euclidean in the given color space
         euc_nei = cv2.sqrt(np.sum(cv2.pow(self.img_now - ex1_nei, 2), axis=2))
-        dead_difference = euc_nei > self.mu
-
-        # Getting pixels that are dead in the current generation
-        currently_dead = np.sum(np.abs(self.img_now), axis=2) <= self.dead_th
-        total_dead = np.logical_or(dead_difference, currently_dead)
+        will_die_due_difference = euc_nei > self.mu
 
         # Verifying if the neighborhood is over or under populated:
         # the neighborhood is overpopulated if the standard deviation of the neighborhood is greater than sigma[1]
         stdev = np.sum(cv2.sqrt(ex2_nei - cv2.pow(ex1_nei, 2)), axis=2)
         underpopulated = stdev < self.sigma[0]
-        overpopulated = stdev > self.sigma[1]
-        dead_population = np.logical_or(underpopulated, overpopulated)
+        will_die_due_overpopulation = stdev > self.sigma[1]
 
         # Pixels that will given birth in the next generation or will die
-        dead_pixels = np.logical_or(dead_difference, dead_population)
-        birth_pixels = np.logical_and(total_dead, np.logical_not(dead_population))
+        dead_will_die_diff = np.logical_or(currently_dead, will_die_due_difference)
+        birth_pixels = np.logical_and(dead_will_die_diff, underpopulated)
 
-        # Removing the dead pixels from the current generation by setting them times a random value within the color space
-        colors = self.colors.reshape(-1, 3)
-        indices = self.rng.permutation(colors.shape[0])
-        shuffled_matrix = colors.reshape(-1, 3)[indices, ::].reshape(self.colors.shape)
-        img_next[dead_pixels, ::] = shuffled_matrix[dead_pixels, ::] * img_next[dead_pixels, ::]
+        # Removing the overpopulated pixels from the current generation by setting them to a random color
+        noise_a = self.rng.normal(0, 1, self.img_now.shape).astype("float32")
+        noise_a = noise_a * np.array([100, 128, 128]).reshape((1, 1, 3)).astype("float32")
+        img_next[will_die_due_overpopulation, ::] = noise_a[will_die_due_overpopulation, ::]
 
         # Adding the pixels that will be born in the next generation by adding noise to the neighborhood
-        noise = self.rng.normal(0, 0.01, self.img_now.shape).astype("float32")
-        img_next[birth_pixels, ::] = ex1_nei[birth_pixels, ::] + noise[birth_pixels, ::]
+        noise_a = self.rng.normal(0, self.sigma[1], self.img_now.shape).astype("float32")
+        img_next[birth_pixels, ::] = ex1_nei[birth_pixels, ::] + noise_a[birth_pixels, ::]
 
         # Updating the current generation image
         self.img_now = img_next.copy()
@@ -146,4 +166,4 @@ class GameOfLife:
         temp = cv2.cvtColor(img_next, cv2.COLOR_Lab2BGR)
 
         cv2.imshow("Game of Life", temp)
-        cv2.waitKey(0)
+        cv2.waitKey(250)

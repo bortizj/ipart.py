@@ -30,6 +30,6 @@ if __name__ == "__main__":
         img = cv2.imread(str(path_img))
 
         gol = GameOfLife(path_img)
-        for jj in range(15):
+        for jj in range(50):
             gol.next_generation()
         # gol.make_mpg_video(path_vid, n_iterations=1000, fps=25, motion_range=0)
