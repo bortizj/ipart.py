@@ -16,10 +16,10 @@ author: Benhur Ortiz-Jaramillo
 """
 
 from ipart.models.game_of_life import GameOfLife
-from ipart.utils.tools import GIFVideoMaker
 from ipart import REPO_ROOT
 
 import cv2
+
 
 PATH_SAMPLES = REPO_ROOT.joinpath(r"data")
 
@@ -31,15 +31,4 @@ if __name__ == "__main__":
         img = cv2.imread(str(path_img))
 
         gol = GameOfLife(path_img)
-        gif = GIFVideoMaker(str(path_vid))
-        for jj in range(100):
-            gol.next_generation()
-
-            temp = cv2.cvtColor(gol.img_now, cv2.COLOR_Lab2BGR)
-
-            gif.append_frame(temp)
-
-            cv2.imshow("Game of Life", temp)
-            cv2.waitKey(100)
-
-        gif.make_gif_video()
+        gol.play(path_vid)

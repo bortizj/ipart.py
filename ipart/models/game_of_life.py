@@ -19,7 +19,11 @@ import numpy as np
 import cv2
 from pathlib import Path
 
+from tqdm import tqdm
+
 from ipart.utils.imgproc import check_and_adjust_image_size
+
+from ipart.utils.tools import GIFVideoMaker
 
 
 class GameOfLife:
@@ -95,6 +99,56 @@ class GameOfLife:
         if color_space == "Lab":
             self.img_now = cv2.cvtColor(self.img_now, cv2.COLOR_BGR2Lab)
 
+        self.img_ref = self.img_now.copy()
+
+    def play(self, path_gif, num_generations: int = 500, display: bool = True):
+        """
+        Plays the Game of Life algorithm for a given number of generations.
+        """
+        gif = GIFVideoMaker(str(path_gif))
+        tqdm_loop = tqdm(range(num_generations), desc="Game of Life")
+
+        gen_error = []
+        for _ in tqdm_loop:
+            self.next_generation()
+
+            # Getting the generational error
+            gen_error.append(self.measure_generational_error())
+
+            # Temporal color BGR or RGB image for gif and displaying
+            temp = cv2.cvtColor(self.img_now, cv2.COLOR_Lab2BGR)
+
+            # Appends the current generation to the gif
+            gif.append_frame(temp)
+
+            # Displaying the current generation
+            if display:
+                cv2.imshow("Game of Life", temp)
+                cv2.waitKey(100)
+
+            # Detecting if the population is stable
+            diffs = np.diff(gen_error)
+            diff_ratios = np.abs(diffs[1:] / diffs[:-1])
+            if np.any(diff_ratios > 20):
+                print(f"\nPopulation is stable: {diff_ratios[-1]:.3f}")
+                break
+
+            if diff_ratios.size > 1:
+                tqdm_loop.set_postfix(diff_ratio=diff_ratios[-1])
+
+        cv2.destroyAllWindows()
+
+        gif.make_gif_video()
+
+    def measure_generational_error(self):
+        """
+        Measures the generational error of the algorithm by comparing the current generation with the reference image.
+        """
+        # Getting deltaE between the current generation and the reference image
+        deltaE = cv2.sqrt(np.sum(cv2.pow(self.img_now - self.img_ref, 2), axis=2))
+
+        return np.mean(deltaE)
+
     def segment_image(self):
         """
         Segments the image using kmeans clustering.
@@ -160,8 +214,8 @@ class GameOfLife:
         # Verifying if the pixel will be alive or not:
         # the pixel is alive if is similar to the neighborhood |pixel - avg_n| <= mu
         # here the distance will be euclidean in the given color space
-        euc_nei = cv2.sqrt(np.sum(cv2.pow(self.img_now - ex1_nei, 2), axis=2))
-        will_die_due_difference = euc_nei > self.mu
+        deltaE_nei = cv2.sqrt(np.sum(cv2.pow(self.img_now - ex1_nei, 2), axis=2))
+        will_die_due_difference = deltaE_nei > self.mu
 
         # Verifying if the neighborhood is over or under populated:
         # the neighborhood is overpopulated if the standard deviation of the neighborhood is greater than sigma[1]
