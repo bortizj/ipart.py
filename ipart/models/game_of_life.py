@@ -55,13 +55,13 @@ class GameOfLife:
     def __init__(
         self,
         in_bgr: Path,
-        wsize: int = 3,
-        dead_th: float = 1e-3,
-        mu: float = 10,
-        sigma: tuple[float, float] = (5, 50),
-        tgt_size: tuple[int, int] = (360, 360),
-        add_noise: tuple[float, float] = (5 / 255, 0.01),
+        wsize: int = 5,
+        mu: float = 3,
+        sigma: tuple[float, float] = (5, 15),
+        tgt_size: tuple[int, int] = (512, 512),
+        add_noise: tuple[float, float] = (5 / 255, 0.015),
         color_space: str = "Lab",
+        dead_th: float = 1e-3,
         rng_seed: int = 42,
     ):
         # Create a random number generator with a seed, adds "predictable" uncertainty to the algorithm
@@ -165,7 +165,7 @@ class GameOfLife:
 
         # Verifying if the neighborhood is over or under populated:
         # the neighborhood is overpopulated if the standard deviation of the neighborhood is greater than sigma[1]
-        stdev = np.sum(cv2.sqrt(ex2_nei - cv2.pow(ex1_nei, 2)), axis=2)
+        stdev = np.mean(cv2.sqrt(ex2_nei - cv2.pow(ex1_nei, 2)), axis=2)
         underpopulated = stdev < self.sigma[0]
         will_die_due_overpopulation = stdev > self.sigma[1]
 
@@ -182,12 +182,7 @@ class GameOfLife:
         )
 
         # Adding the pixels that will be born in the next generation by adding noise to the neighborhood
-        img_next[birth_pixels, ::] = ex1_nei[birth_pixels, ::] + noise_a[birth_pixels, ::]
+        img_next[birth_pixels, ::] = ex1_nei[birth_pixels, ::] + noise_a[birth_pixels, ::] / (self.wsize**2 - 1)
 
         # Updating the current generation image
         self.img_now = img_next.copy()
-
-        temp = cv2.cvtColor(img_next, cv2.COLOR_Lab2BGR)
-
-        cv2.imshow("Game of Life", temp)
-        cv2.waitKey(250)
