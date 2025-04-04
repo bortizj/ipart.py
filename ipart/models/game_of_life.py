@@ -88,6 +88,7 @@ class GameOfLife:
 
         # Normalizing the image to be between 0 and 1
         self.img_now = self.img_now.astype("float32") / 255.0
+        self.segment_image()
         self.add_randomness(add_noise)
 
         # Converting to CIELAB color space for better color distance calculations
@@ -98,7 +99,28 @@ class GameOfLife:
         """
         Segments the image using kmeans clustering.
         """
-        pass
+        smoothed_image = cv2.GaussianBlur(self.img_now, [13, 13], 1.5)
+        pixels = smoothed_image.reshape((-1, 3)).astype(np.float32)
+
+        # Define criteria = (type, max_iter, epsilon)
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
+
+        # Apply k-means and measure the Within-cluster sum of squares
+        wcss = []
+        for k in range(2, 20):
+            _, labels, centers = cv2.kmeans(pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+
+            wcss.append(np.sum(np.linalg.norm(pixels - centers[labels.flatten()], axis=1) ** 2))
+
+        # Detect the "elbow" using the rate of change of WCSS
+        diffs = np.diff(wcss)
+        diff_ratios = diffs[1:] / diffs[:-1]
+        optimal_k = np.argmin(diff_ratios) + 2
+
+        # Making the same image but changing the color of the cluster for a random color
+        _, labels, centers = cv2.kmeans(pixels, optimal_k, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+        noise_a = self.rng.normal(0, 1, centers.shape).astype("float32") * np.array([[70, 127, 127]]).astype("float32")
+        self.img_rand = noise_a[labels.flatten()].reshape(self.img_now.shape)
 
     def add_randomness(self, add_noise: list[float, float]):
         """
@@ -151,13 +173,15 @@ class GameOfLife:
         dead_will_die_diff = np.logical_or(currently_dead, will_die_due_difference)
         birth_pixels = np.logical_and(dead_will_die_diff, underpopulated)
 
+        # The randomness of life is added to the pixels that will be born or dead in the next generation
+        noise_a = self.rng.normal(0, self.sigma[1], self.img_now.shape).astype("float32")
+
         # Removing the overpopulated pixels from the current generation by setting them to a random color
-        noise_a = self.rng.normal(0, 1, self.img_now.shape).astype("float32")
-        noise_a = noise_a * np.array([100, 128, 128]).reshape((1, 1, 3)).astype("float32")
-        img_next[will_die_due_overpopulation, ::] = noise_a[will_die_due_overpopulation, ::]
+        img_next[will_die_due_overpopulation, ::] = (
+            self.img_rand[will_die_due_overpopulation, ::] + noise_a[will_die_due_overpopulation, ::]
+        )
 
         # Adding the pixels that will be born in the next generation by adding noise to the neighborhood
-        noise_a = self.rng.normal(0, self.sigma[1], self.img_now.shape).astype("float32")
         img_next[birth_pixels, ::] = ex1_nei[birth_pixels, ::] + noise_a[birth_pixels, ::]
 
         # Updating the current generation image
