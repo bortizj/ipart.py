@@ -39,7 +39,14 @@ class LBP:
     University of Oulu. (2003)
     """
 
-    def __init__(self, in_bgr: str, r: float = 1.5, th: float = 10 / 255.0, rng_seed: int = 42):
+    def __init__(
+        self,
+        in_bgr: str,
+        r: float = 1.5,
+        th: float = 10 / 255.0,
+        rng_seed: int = 42,
+        color_map: int = cv2.COLORMAP_RAINBOW,
+    ):
         # Create a random number generator with a seed, adds "predictable" uncertainty to the algorithm
         self.rng = np.random.default_rng(seed=rng_seed)
 
@@ -54,6 +61,7 @@ class LBP:
         self.img_now = check_and_adjust_image_size(self.in_bgr, tgt_size=TGT_SIZE)
 
         self.img_ref = self.img_now.copy()
+        self.color_map = color_map
 
         # If the image is BGR then we convert it to grayscale
         if len(self.img_now.shape) > 2:
@@ -62,6 +70,15 @@ class LBP:
             self.img_now = self.img_now.astype("float32") / 255.0
 
     def play(self, path_gif, display: bool = True, play_fps: int = 5) -> np.ndarray:
+
+        def blend_img(table, lbp_img, img, n_patterns, color_map):
+            temp = (255 * table[lbp_img.astype("int")] / n_patterns).astype("uint8")
+            bgr_lbp = cv2.applyColorMap(cv2.medianBlur(temp, 5), color_map)
+
+            # Blending the images
+            bgr_lbp = cv2.addWeighted(bgr_lbp, BETA_BLEND, img, 1.0, 0)
+            return bgr_lbp
+
         if path_gif is not None:
             gif = GIFVideoMaker(str(path_gif))
 
@@ -96,10 +113,8 @@ class LBP:
             # Accumulating pattern code
             lbp_img += img_ii.astype("float32") * (2**ii)
 
-            # converting temporally images for visualization
-            temp = (255 * table[lbp_img.astype("int")] / n_patterns).astype("uint8")
-            bgr_lbp = cv2.applyColorMap(cv2.medianBlur(temp, 5), cv2.COLORMAP_RAINBOW)
-            bgr_lbp = cv2.addWeighted(bgr_lbp, BETA_BLEND, self.img_ref, 1.0, 0)
+            # Blending the images
+            bgr_lbp = blend_img(table, lbp_img, self.img_ref, n_patterns, self.color_map)
 
             # Appends the current texture pattern image to the gif
             if path_gif is not None:
@@ -111,15 +126,8 @@ class LBP:
                 cv2.imshow(f"LBP", bgr_lbp)
                 cv2.waitKey(int(1000 / play_fps))
 
-        # Look at tables as proposed by Maenpaa to combine similar patterns
-        lbp_img = (255 * table[lbp_img.astype("int")] / n_patterns).astype("uint8")
-
-        # Filtering the lbp image to remove spurious patterns
-        lbp_img = cv2.medianBlur(lbp_img, 5)
-
-        # Converting the color patterns to a color image
-        bgr_lbp = cv2.applyColorMap(lbp_img, cv2.COLORMAP_RAINBOW)
-        bgr_lbp = cv2.addWeighted(bgr_lbp, BETA_BLEND, self.img_ref, 1.0, 0)
+        # Blending the images
+        bgr_lbp = blend_img(table, lbp_img, self.img_ref, n_patterns, self.color_map)
 
         # Storing the gif
         if path_gif is not None:

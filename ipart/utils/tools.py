@@ -21,6 +21,28 @@ import cv2
 import numpy as np
 
 
+def get_random_colors(n_colors: int, rng: np.random.Generator):
+    def get_clipped_random_color(rng):
+        random_color = np.clip(rng.normal(0, 1, (1, 3)).astype("float32"), -1, 1) * np.array([[70, 120, 120]]).astype("float32")
+        random_color[::, 0] = np.clip(random_color[::, 0], 0, 100)
+        return random_color
+
+    rand_color = get_clipped_random_color(rng)
+    random_colors = [rand_color.reshape(-1).tolist()]
+    for __ in range(n_colors):
+        rand_color = get_clipped_random_color(rng)
+        dist = np.sqrt(np.power(rand_color - np.array(random_colors), 2).sum(axis=1))
+        while np.min(dist) < 40.0:
+            rand_color = get_clipped_random_color(rng)
+            dist = np.sqrt(np.power(rand_color - np.array(random_colors), 2).sum(axis=1))
+        random_colors.append(rand_color.reshape(-1).tolist())
+
+    random_colors = cv2.cvtColor(np.array(random_colors).astype("float32").reshape(-1, 1, 3), cv2.COLOR_Lab2BGR)
+    random_colors = (255 * random_colors.reshape(-1, 3)).astype("uint8")
+
+    return random_colors
+
+
 class GIFVideoMaker:
     """
     Class to make a gif from images
