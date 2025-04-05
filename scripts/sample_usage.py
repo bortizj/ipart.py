@@ -17,6 +17,7 @@ author: Benhur Ortiz-Jaramillo
 
 from ipart.models.game_of_life import GameOfLife
 from ipart import REPO_ROOT
+import time
 
 import cv2
 
@@ -30,5 +31,6 @@ if __name__ == "__main__":
         path_vid = PATH_SAMPLES.joinpath(f"test_{ii}_gol.gif")
         img = cv2.imread(str(path_img))
 
-        gol = GameOfLife(path_img)
-        gol.play(None)
+        # Random seed from the current time
+        gol = GameOfLife(path_img, rng_seed=int(time.time()) + 42)
+        gol.play(path_vid, play_fps=5)
