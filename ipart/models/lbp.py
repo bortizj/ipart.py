@@ -28,6 +28,7 @@ from ipart import TGT_SIZE
 LBP_FILE = Path(__file__).parent.absolute().joinpath(r"lbp")
 RADII = {1: 8, 1.5: 12}
 LINE_MAP = {8: 0, 12: 1}
+BETA_BLEND = 1.0
 
 
 class LBP:
@@ -52,6 +53,8 @@ class LBP:
         # Resizing the image for computational efficiency
         self.img_now = check_and_adjust_image_size(self.in_bgr, tgt_size=TGT_SIZE)
 
+        self.img_ref = self.img_now.copy()
+
         # If the image is BGR then we convert it to grayscale
         if len(self.img_now.shape) > 2:
             self.img_now = cv2.cvtColor(self.img_now, cv2.COLOR_BGR2GRAY).astype("float32") / 255.0
@@ -72,6 +75,11 @@ class LBP:
         n_patterns = len(np.unique(table))
         lbp_img = np.zeros_like(self.img_now)
 
+        # Storing the initial image for the gif
+        if path_gif is not None:
+            for jj in range(n_patterns):
+                gif.append_frame(self.img_ref)
+
         # Pixels located outside the grid are computed using bilinear interpolation
         xx, yy = np.meshgrid(
             np.arange(0, self.img_now.shape[1]).astype("float32"),
@@ -91,10 +99,11 @@ class LBP:
             # converting temporally images for visualization
             temp = (255 * table[lbp_img.astype("int")] / n_patterns).astype("uint8")
             bgr_lbp = cv2.applyColorMap(cv2.medianBlur(temp, 5), cv2.COLORMAP_RAINBOW)
+            bgr_lbp = cv2.addWeighted(bgr_lbp, BETA_BLEND, self.img_ref, 1.0, 0)
 
-            # Appends the current generation image to the gif
+            # Appends the current texture pattern image to the gif
             if path_gif is not None:
-                for jj in range(min(1, int(n_patterns / 3))):
+                for jj in range(max(1, int(n_patterns / 3))):
                     gif.append_frame(bgr_lbp)
 
             if display:
@@ -110,6 +119,7 @@ class LBP:
 
         # Converting the color patterns to a color image
         bgr_lbp = cv2.applyColorMap(lbp_img, cv2.COLORMAP_RAINBOW)
+        bgr_lbp = cv2.addWeighted(bgr_lbp, BETA_BLEND, self.img_ref, 1.0, 0)
 
         # Storing the gif
         if path_gif is not None:

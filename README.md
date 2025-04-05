@@ -78,7 +78,7 @@ Example images:
 
 
 ## Aggregating texture
-Aggregating texture is a cellular automaton for a zero-player game where the evolution is determined by its initial state. One interacts with the aggregating texture algorithm by creating an initial configuration and observing how it evolves. In this case the cellular automaton is governed by the [local binary patterns algorithm](https://en.wikipedia.org/wiki/Local_binary_patterns).
+Aggregating texture is an algorithm that aggregates and displays the detected texture over and image using a random color. The texture image is computed using the [local binary patterns algorithm](https://en.wikipedia.org/wiki/Local_binary_patterns algorithm. Every time that a new texture pattern is aggregated, we display the cumulative texture as an overlay over the original image.
 Note that there are a few parameters that could be tuned in order to get different results
 ```python
 th: float = 1 / 255.0 # Controls the threshold for the neighbors
