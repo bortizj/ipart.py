@@ -45,7 +45,7 @@ pip install -e .
 
 ## The game of life
 
-The [original algorithm]([/iFAS/docs/iFAS_user_guide.pdf](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)) also known as Conway's Game of Life is a cellular automaton for a zero-player game where the evolution is determined by its initial state. One interacts with the Game of Life by creating an initial configuration and observing how it evolves. For binary images the algorithm is as follows:
+The [original algorithm](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) also known as Conway's Game of Life is a cellular automaton for a zero-player game where the evolution is determined by its initial state. One interacts with the Game of Life by creating an initial configuration and observing how it evolves. For binary images the algorithm is as follows:
 - Birth: if unpopulated pixel surrounded by exactly n populated pixels, becomes populated next generation.
 - Death by loneliness: if populated pixel is surrounded by n - k or fewer, the pixel becomes unpopulated next generation.
 - Death by overpopulation: if populated pixel is surrounded by n + k or more, the pixel becomes unpopulated next generation.
@@ -69,6 +69,7 @@ sigma: tuple[float, float] = (5, 15) # The limits of over and under population
 add_noise: tuple[float, float] = (10 / 255, 0.02) # Added initial random noise to the image
 ```
 Example images:
+
 ![test_0_gol.gif](/data/test_0_gol.gif)
 ![test_1_gol.gif](/data/test_1_gol.gif)
 ![test_2_gol.gif](/data/test_2_gol.gif)

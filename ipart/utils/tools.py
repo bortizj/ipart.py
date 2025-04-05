@@ -18,6 +18,8 @@ author: Benhur Ortiz-Jaramillo
 from PIL import Image
 import cv2
 
+import numpy as np
+
 
 class GIFVideoMaker:
     """
@@ -42,7 +44,10 @@ class GIFVideoMaker:
         """
         Append a frame to the gif video.
         """
-        frame = 255 * cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        if np.max(frame) > 1.0:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        else:
+            frame = 255 * cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         self.frames.append(Image.fromarray(frame.astype("uint8")))
 
     def make_gif_video(self):

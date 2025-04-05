@@ -26,7 +26,8 @@ from ipart.utils.imgproc import check_and_adjust_image_size
 from ipart.utils.tools import GIFVideoMaker
 
 # Global constants for the GoL algorithm
-TGT_SIZE: tuple[int, int] = (512, 512)
+from ipart import TGT_SIZE
+
 DEAD_TH: float = 1e-3
 
 
