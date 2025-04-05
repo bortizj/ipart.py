@@ -175,7 +175,7 @@ class GameOfLife:
         noise_a = self.rng.normal(0, 1, centers.shape).astype("float32") * np.array([[70, 127, 127]]).astype("float32")
         self.img_rand = noise_a[labels.flatten()].reshape(self.img_now.shape)
 
-    def add_randomness(self, add_noise: list[float, float]):
+    def add_randomness(self, add_noise: tuple[float, float]):
         """
         Adds randomness to the image by adding gaussian noise and salt and pepper noise.
         """

@@ -33,4 +33,4 @@ if __name__ == "__main__":
 
         # Random seed from the current time
         gol = GameOfLife(path_img, rng_seed=int(time.time()) + 42)
-        gol.play(path_vid, play_fps=5)
+        gol.play(None, play_fps=5)
