@@ -75,3 +75,20 @@ Example images:
 ![test_2_gol.gif](/data/test_2_gol.gif)
 ![test_3_gol.gif](/data/test_3_gol.gif)
 ![test_4_gol.gif](/data/test_4_gol.gif)
+
+
+## Aggregating texture
+Aggregating texture is a cellular automaton for a zero-player game where the evolution is determined by its initial state. One interacts with the aggregating texture algorithm by creating an initial configuration and observing how it evolves. In this case the cellular automaton is governed by the [local binary patterns algorithm](https://en.wikipedia.org/wiki/Local_binary_patterns).
+Note that there are a few parameters that could be tuned in order to get different results
+```python
+th: float = 1 / 255.0 # Controls the threshold for the neighbors
+r: float = 1.5 # Controls the radius of the neighbors only valid 1.0 or 1.5
+```
+
+Example images:
+
+![test_0_gol.gif](/data/test_0_lbp.gif)
+![test_1_gol.gif](/data/test_1_lbp.gif)
+![test_2_gol.gif](/data/test_2_lbp.gif)
+![test_3_gol.gif](/data/test_3_lbp.gif)
+![test_4_gol.gif](/data/test_4_lbp.gif)
