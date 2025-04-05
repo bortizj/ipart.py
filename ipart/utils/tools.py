@@ -21,10 +21,19 @@ import cv2
 
 class GIFVideoMaker:
     """
-    Class to make a gif video from images
+    Class to make a gif from images
     """
 
-    def __init__(self, gif_path: str, duration: int = 10):
+    def __init__(self, gif_path: str, duration: int = 100):
+        """
+        Initialize the GIFVideoMaker class.
+        Parameters
+        ----------
+        gif_path: str
+            Path to save the gif video.
+        duration: int
+            Duration of each frame in milliseconds.
+        """
         self.gif_path = gif_path
         self.duration = duration
         self.frames = []

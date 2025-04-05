@@ -21,7 +21,7 @@ import cv2
 
 def check_and_adjust_image_size(in_bgr: np.ndarray, tgt_size: tuple[int, int] = (180, 320)) -> np.ndarray:
     """
-    Making images lower than a standard size for computational purposes
+    Reducing image size for computational efficiency.
     """
     img_sz = in_bgr.shape[:2:]
     if img_sz[0] > tgt_size[0] or img_sz[1] > tgt_size[1]:
