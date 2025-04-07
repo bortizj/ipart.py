@@ -24,6 +24,7 @@ from tqdm import tqdm
 from ipart.utils.imgproc import check_and_adjust_image_size
 
 from ipart.utils.tools import GIFVideoMaker
+from ipart.palettes.color_palettes import ColorPalette
 
 # Global constants for the GoL algorithm
 from ipart import TGT_SIZE
@@ -68,7 +69,8 @@ class GameOfLife:
         wsize: int = 5,
         mu: float = 3,
         sigma: tuple[float, float] = (5, 15),
-        add_noise: tuple[float, float] = (10 / 255, 0.02),
+        add_noise: tuple[float, float] = (7 / 255, 0.015),
+        color_palette: tuple[str, int] = ("kaggle", 24),
         rng_seed: int = 42,
     ):
         # Create a random number generator with a seed, adds "predictable" uncertainty to the algorithm
@@ -78,6 +80,10 @@ class GameOfLife:
         self.wsize = wsize
         self.mu = mu
         self.sigma = sigma
+
+        # Creating the color palette for the algorithm
+        self.ncolors = color_palette[1]
+        self.color_palette = ColorPalette(self.rng, n_colors=color_palette[1], color_palette=color_palette[0])
 
         # Creating the necessary kernel for the calculations
         self.kernel = np.ones((self.wsize, self.wsize)).astype("float32")
@@ -101,16 +107,37 @@ class GameOfLife:
         # Creating a reference image for the generational error
         self.img_ref = self.img_now.copy()
 
-    def play(self, path_gif, num_generations: int = 500, display: bool = True, play_fps: int = 60):
+    def play(self, path_gif, num_generations: int = 500, display: bool = True, play_fps: int = 60, gif_fps: int = 10):
         """
         Plays the Game of Life algorithm for a given number of generations.
         """
         if path_gif is not None:
-            gif = GIFVideoMaker(str(path_gif))
+            gif = GIFVideoMaker(str(path_gif), duration=int(1000 / gif_fps))
+        else:
+            gif = None
+
+        # Running until a number of generation or reaching a stable population
+        self.loop(gif, num_generations=num_generations, display=display, play_fps=play_fps)
+
+        # Now running for extra number of generations
+        self.loop(gif, num_generations=45, display=display, play_fps=play_fps)
+
+        # Destroying the display window
+        if display:
+            cv2.destroyAllWindows()
+
+        # Storing all the generations in a gif
+        if path_gif is not None:
+            gif.make_gif_video()
+
+    def loop(self, gif, num_generations: int = 500, display: bool = True, play_fps: int = 60):
+        """
+        Loops through the generations of the Game of Life algorithm.
+        """
         tqdm_loop = tqdm(range(num_generations), desc="Game of Life", ncols=100)
 
         gen_error = []
-        for _ in tqdm_loop:
+        for ii in tqdm_loop:
             self.next_generation()
 
             # Getting the generational error
@@ -120,7 +147,7 @@ class GameOfLife:
             temp = cv2.cvtColor(self.img_now, cv2.COLOR_Lab2BGR)
 
             # Appends the current generation image to the gif
-            if path_gif is not None:
+            if gif is not None:
                 gif.append_frame(temp)
 
             # Displaying the current generation
@@ -128,29 +155,22 @@ class GameOfLife:
                 cv2.imshow("Game of Life", temp)
                 cv2.waitKey(int(1000 / play_fps))
 
-            # Detecting if the population is stable
-            diffs = np.diff(gen_error)
-            if np.any(np.isclose(diffs, 0)):
-                print(f"\nNo change detected: {diffs[-1]:.3f}")
-                break
+            if num_generations > 50:
+                # Detecting if the population is stable
+                diffs = np.diff(gen_error)
+                if np.any(np.isclose(diffs, 0)):
+                    print(f"\nNo change detected: {ii:d} {diffs[-1]:.3f}")
+                    break
 
-            # Getting the ratio of the differences between generations
-            diff_ratios = np.abs(diffs[1:] / diffs[:-1])
-            # A population is stable normally when the change ratio is higher than a threshold
-            if np.any(diff_ratios > 7.5):
-                print(f"\nPopulation is stable: {diff_ratios[-1]:.3f}")
-                break
+                # Getting the ratio of the differences between generations
+                diff_ratios = np.abs(diffs[1:] / diffs[:-1])
+                # A population is stable normally when the change ratio is higher than a threshold
+                if np.any(diff_ratios > 10):
+                    print(f"\nPopulation is stable: {ii:d} {diff_ratios[-1]:.3f}")
+                    break
 
-            if diff_ratios.size > 0:
-                tqdm_loop.set_postfix(diff_ratio=diff_ratios[-1])
-
-        # Destroying the display window
-        if display:
-            cv2.destroyAllWindows()
-
-        # Storing all the generations in a gif
-        if path_gif is not None:
-            gif.make_gif_video()
+                if diff_ratios.size > 0:
+                    tqdm_loop.set_postfix(diff_ratio=diff_ratios[-1])
 
     def measure_generational_error(self):
         """
@@ -172,9 +192,9 @@ class GameOfLife:
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
 
         # Creating an image where each cluster is represented by a random color (dead state)
-        _, labels, centers = cv2.kmeans(pixels, 24, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
-        noise_a = self.rng.normal(0, 1, centers.shape).astype("float32") * np.array([[70, 127, 127]]).astype("float32")
-        self.img_rand = noise_a[labels.flatten()].reshape(self.img_now.shape)
+        _, labels, __ = cv2.kmeans(pixels, self.ncolors, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+        self.img_rand = self.color_palette.lut(labels).reshape(self.img_now.shape)
+        self.img_rand = cv2.cvtColor(self.img_rand, cv2.COLOR_BGR2Lab)
 
     def add_randomness(self, add_noise: tuple[float, float]):
         """

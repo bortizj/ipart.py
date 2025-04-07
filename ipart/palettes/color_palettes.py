@@ -17,12 +17,12 @@ author: Benhur Ortiz-Jaramillo
 
 import numpy as np
 import pandas as pd
-import cv2
 
 from ipart import REPO_ROOT
 
-DMC_FILE = REPO_ROOT.joinpath(r"palettes", r"dmc2rgb.csv")
-COLORS_FILE = REPO_ROOT.joinpath(r"palettes", r"colors_kaggle.csv")
+DMC_FILE = REPO_ROOT.joinpath(r"ipart", r"assets", r"dmc2rgb.csv")
+KAGGLE_FILE = REPO_ROOT.joinpath(r"ipart", r"assets", r"colors_kaggle.csv")
+NEON_FILE = REPO_ROOT.joinpath(r"ipart", r"assets", r"neon.csv")
 
 
 class ColorPalette:
@@ -38,9 +38,11 @@ class ColorPalette:
             rgb_code = rng.integers(0, 255, (n_colors, 3))
         else:
             if color_palette == "dmc":
-                __, rgb_code, __ = get_dmc_colors()
+                __, rgb_code, __ = _get_dmc_colors()
             elif color_palette == "kaggle":
-                rgb_code, __ = get_colors_list()
+                rgb_code, __ = _get_kaggle_colors()
+            elif color_palette == "neon":
+                rgb_code = _get_neon_colors()
             else:
                 raise ValueError(f"Unknown color palette: {color_palette}")
             # Selecting the colors from the file
@@ -63,7 +65,7 @@ class ColorPalette:
         return self.bgr_lut[img.astype("int")]
 
 
-def get_dmc_colors():
+def _get_dmc_colors():
     df = pd.read_csv(DMC_FILE)
     data = df.values
     dmc_code = data[::, 0]
@@ -73,10 +75,18 @@ def get_dmc_colors():
     return dmc_code, rgb_code, description
 
 
-def get_colors_list():
-    df = pd.read_csv(COLORS_FILE)
+def _get_kaggle_colors():
+    df = pd.read_csv(KAGGLE_FILE)
     data = df.values
     rgb_code = data[::, 3:].astype("float32")
     description = data[::, 1]
 
     return rgb_code, description
+
+
+def _get_neon_colors():
+    df = pd.read_csv(NEON_FILE)
+    data = df.values
+    rgb_code = data.astype("float32")
+
+    return rgb_code

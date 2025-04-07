@@ -24,6 +24,8 @@ import cv2
 
 
 PATH_SAMPLES = REPO_ROOT.joinpath(r"data")
+GIF_FPS = 10
+DISP_FPS = 10
 
 if __name__ == "__main__":
     # Example test for the sample images
@@ -36,5 +38,5 @@ if __name__ == "__main__":
         # Random seed from the current time
         gol = GameOfLife(path_img, rng_seed=int(time.time()) + 42)
         lbp = LBP(path_img, rng_seed=int(time.time()) + 42)
-        lbp.play(None, play_fps=10)
-        gol.play(None, play_fps=10)
+        lbp.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
+        gol.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
