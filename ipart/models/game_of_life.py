@@ -71,6 +71,7 @@ class GameOfLife:
         sigma: tuple[float, float] = (5, 15),
         add_noise: tuple[float, float] = (10 / 255, 0.04),
         color_palette: tuple[str, int] = ("kaggle", 24),
+        uses_median_blur: bool = True,
         rng_seed: int = 42,
     ):
         # Create a random number generator with a seed, adds "predictable" uncertainty to the algorithm
@@ -80,6 +81,8 @@ class GameOfLife:
         self.wsize = wsize
         self.mu = mu
         self.sigma = sigma
+
+        self.uses_median_blur = uses_median_blur
 
         # Creating the color palette for the algorithm
         self.ncolors = color_palette[1]
@@ -149,7 +152,11 @@ class GameOfLife:
             gen_error.append(self.measure_generational_error())
 
             # Temporal color BGR image for displaying
-            temp = cv2.cvtColor(self.img_now, cv2.COLOR_Lab2BGR)
+            if self.uses_median_blur:
+                temp = cv2.medianBlur(self.img_now, 3)
+            else:
+                temp = self.img_now.copy()
+            temp = cv2.cvtColor(temp, cv2.COLOR_Lab2BGR)
 
             # Appends the current generation image to the gif
             if gif is not None:
