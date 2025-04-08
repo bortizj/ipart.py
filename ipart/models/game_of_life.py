@@ -69,7 +69,7 @@ class GameOfLife:
         wsize: int = 5,
         mu: float = 3,
         sigma: tuple[float, float] = (5, 15),
-        add_noise: tuple[float, float] = (7 / 255, 0.015),
+        add_noise: tuple[float, float] = (10 / 255, 0.04),
         color_palette: tuple[str, int] = ("kaggle", 24),
         rng_seed: int = 42,
     ):
@@ -98,14 +98,19 @@ class GameOfLife:
 
         # Normalizing the image between 0 and 1
         self.img_now = self.img_now.astype("float32") / 255.0
+
+        # Creating a copy where to do the modifications without noise
+        self.img_now_noisy = self.img_now.copy()
+
         self.segment_image()
         self.add_randomness(add_noise)
 
         # Converting to CIELab color space for better color distance calculations
+        self.img_now_noisy = cv2.cvtColor(self.img_now_noisy, cv2.COLOR_BGR2Lab)
         self.img_now = cv2.cvtColor(self.img_now, cv2.COLOR_BGR2Lab)
 
         # Creating a reference image for the generational error
-        self.img_ref = self.img_now.copy()
+        self.img_ref = self.img_now_noisy.copy()
 
     def play(self, path_gif, num_generations: int = 500, display: bool = True, play_fps: int = 60, gif_fps: int = 10):
         """
@@ -177,7 +182,7 @@ class GameOfLife:
         Measures the generational error of the algorithm by comparing the current generation with the reference image.
         """
         # Computing deltaE between the current generation and the reference image
-        deltaE = cv2.sqrt(np.sum(cv2.pow(self.img_now - self.img_ref, 2), axis=2))
+        deltaE = cv2.sqrt(np.sum(cv2.pow(self.img_now_noisy - self.img_ref, 2), axis=2))
 
         return np.mean(deltaE)
 
@@ -185,7 +190,7 @@ class GameOfLife:
         """
         Segments the image using kmeans.
         """
-        smoothed_image = cv2.GaussianBlur(self.img_now, [13, 13], 1.5)
+        smoothed_image = cv2.GaussianBlur(self.img_now_noisy, [13, 13], 1.5)
         pixels = smoothed_image.reshape((-1, 3)).astype(np.float32)
 
         # Define criteria for kmeans
@@ -193,7 +198,7 @@ class GameOfLife:
 
         # Creating an image where each cluster is represented by a random color (dead state)
         _, labels, __ = cv2.kmeans(pixels, self.ncolors, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
-        self.img_rand = self.color_palette.lut(labels).reshape(self.img_now.shape)
+        self.img_rand = self.color_palette.lut(labels).reshape(self.img_now_noisy.shape)
         self.img_rand = cv2.cvtColor(self.img_rand, cv2.COLOR_BGR2Lab)
 
     def add_randomness(self, add_noise: tuple[float, float]):
@@ -201,21 +206,21 @@ class GameOfLife:
         Adds randomness to the image by adding gaussian noise and salt and pepper noise.
         """
         # Adding gaussian noise to the image
-        self.img_now = self.img_now + self.rng.normal(0, add_noise[0], self.img_now.shape).astype("float32")
+        self.img_now_noisy = self.img_now_noisy + self.rng.normal(0, add_noise[0], self.img_now_noisy.shape).astype("float32")
 
         # Adding salt and pepper noise
-        num_noisy_px = int(add_noise[1] * self.img_now.size / 2)
+        num_noisy_px = int(add_noise[1] * self.img_now_noisy.size / 2)
         # Adding pepper noise
-        ii = self.rng.integers(0, self.img_now.shape[0] - 1, num_noisy_px)
-        jj = self.rng.integers(0, self.img_now.shape[1] - 1, num_noisy_px)
-        self.img_now[ii, jj, :] = 0
+        ii = self.rng.integers(0, self.img_now_noisy.shape[0] - 1, num_noisy_px)
+        jj = self.rng.integers(0, self.img_now_noisy.shape[1] - 1, num_noisy_px)
+        self.img_now_noisy[ii, jj, :] = 0
         # Adding salt noise
-        ii = self.rng.integers(0, self.img_now.shape[0] - 1, num_noisy_px)
-        jj = self.rng.integers(0, self.img_now.shape[1] - 1, num_noisy_px)
-        self.img_now[ii, jj, :] = 1
+        ii = self.rng.integers(0, self.img_now_noisy.shape[0] - 1, num_noisy_px)
+        jj = self.rng.integers(0, self.img_now_noisy.shape[1] - 1, num_noisy_px)
+        self.img_now_noisy[ii, jj, :] = 1
 
         # Clipping the image between 0 and 1
-        self.img_now = np.clip(self.img_now, 0, 1)
+        self.img_now_noisy = np.clip(self.img_now_noisy, 0, 1)
 
     def next_generation(self):
         """
@@ -223,18 +228,19 @@ class GameOfLife:
         """
         # Initializing the next generation image
         img_next = self.img_now.copy()
+        img_next_n = self.img_now_noisy.copy()
 
         # Getting pixels that are dead in the current generation
-        currently_dead = np.sum(np.abs(self.img_now), axis=2) <= DEAD_TH
+        currently_dead = np.sum(np.abs(self.img_now_noisy), axis=2) <= DEAD_TH
 
         # Filtering the image to get the average of the neighborhood per channel
-        ex1_nei = cv2.filter2D(self.img_now, -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
-        ex2_nei = cv2.filter2D(cv2.pow(self.img_now, 2), -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
+        ex1_nei = cv2.filter2D(self.img_now_noisy, -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
+        ex2_nei = cv2.filter2D(cv2.pow(self.img_now_noisy, 2), -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
 
         # Verifying if the pixel will be alive or not:
         # the pixel is alive if is similar to the neighborhood |pixel - avg_n| <= mu
         # here the distance will be euclidean in the given color space
-        deltaE_nei = cv2.sqrt(np.sum(cv2.pow(self.img_now - ex1_nei, 2), axis=2))
+        deltaE_nei = cv2.sqrt(np.sum(cv2.pow(self.img_now_noisy - ex1_nei, 2), axis=2))
         will_die_due_difference = deltaE_nei > self.mu
 
         # Verifying if the neighborhood is over or under populated:
@@ -248,15 +254,27 @@ class GameOfLife:
         birth_pixels = np.logical_and(dead_will_die_diff, underpopulated)
 
         # The randomness of life is added to the pixels that will be born or dead in the next generation
-        noise_a = self.rng.normal(0, self.sigma[1], self.img_now.shape).astype("float32")
+        noise_a = self.rng.normal(0, self.sigma[1], self.img_now_noisy.shape).astype("float32")
+        self.img_now_noisy = self.set_dead_birth_pixels(img_next_n, ex1_nei, noise_a, will_die_due_overpopulation, birth_pixels)
+        self.img_now = self.set_dead_birth_pixels(img_next, ex1_nei, noise_a, will_die_due_overpopulation, birth_pixels)
 
+    def set_dead_birth_pixels(
+        self,
+        img: np.ndarray,
+        ex1_nei: np.ndarray,
+        noise_a: np.ndarray,
+        will_die_due_overpopulation: np.ndarray,
+        birth_pixels: np.ndarray,
+    ):
+        """
+        Sets the dead and birth pixels in the image.
+        """
         # Removing the overpopulated pixels from the current generation by setting them to a random color
-        img_next[will_die_due_overpopulation, ::] = (
+        img[will_die_due_overpopulation, ::] = (
             self.img_rand[will_die_due_overpopulation, ::] + noise_a[will_die_due_overpopulation, ::]
         )
 
         # Adding the pixels that will be born in the next generation by adding noise to the neighborhood
-        img_next[birth_pixels, ::] = ex1_nei[birth_pixels, ::] + noise_a[birth_pixels, ::] / (self.wsize**2 - 1)
+        img[birth_pixels, ::] = ex1_nei[birth_pixels, ::] + noise_a[birth_pixels, ::] / (self.wsize**2 - 1)
 
-        # Updating the current generation image
-        self.img_now = img_next.copy()
+        return img
