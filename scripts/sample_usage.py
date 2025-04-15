@@ -17,6 +17,7 @@ author: Benhur Ortiz-Jaramillo
 
 from ipart.models.game_of_life import GameOfLife
 from ipart.models.lbp import LBP
+from ipart.models.random_segments import RandomSegments
 from ipart import REPO_ROOT
 import time
 
@@ -33,10 +34,13 @@ if __name__ == "__main__":
         path_img = PATH_SAMPLES.joinpath(f"test_{ii}.jpg")
         path_gol = PATH_SAMPLES.joinpath(f"test_{ii}_gol.gif")
         path_lbp = PATH_SAMPLES.joinpath(f"test_{ii}_lbp.gif")
+        path_bs = PATH_SAMPLES.joinpath(f"test_{ii}_bs.gif")
         img = cv2.imread(str(path_img))
 
         # Random seed from the current time
         gol = GameOfLife(path_img, rng_seed=int(time.time()) + 42)
         lbp = LBP(path_img, rng_seed=int(time.time()) + 42)
+        bs = RandomSegments(path_img, rng_seed=int(time.time()) + 42)
         lbp.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
         gol.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
+        bs.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)

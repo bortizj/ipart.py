@@ -81,7 +81,7 @@ class LBP:
         else:
             self.img_now = self.img_now.astype("float32") / 255.0
 
-    def play(self, path_gif, display: bool = True, play_fps: int = 5, gif_fps: int = 10) -> np.ndarray:
+    def play(self, path_gif, display: bool = True, play_fps: int = 5, gif_fps: int = 10):
 
         def blend_img(table, lbp_img, img):
             temp = cv2.medianBlur(table[lbp_img.astype("int")].astype("uint8"), 5)
