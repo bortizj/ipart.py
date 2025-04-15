@@ -43,4 +43,4 @@ if __name__ == "__main__":
         rs = RandomSegments(path_img, rng_seed=int(time.time()) + 42)
         lbp.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
         gol.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
-        rs.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
+        rs.play(None, play_fps=DISP_FPS, gif_fps=1)

@@ -78,7 +78,7 @@ Example images:
 
 
 ## Aggregating texture
-Aggregating texture is an algorithm that aggregates and displays the detected texture over and image using a random color. The texture image is computed using the [local binary patterns algorithm](https://en.wikipedia.org/wiki/Local_binary_patterns algorithm. Every time that a new texture pattern is aggregated, we display the cumulative texture as an overlay over the original image.
+Aggregating texture is an algorithm that aggregates and displays the detected texture over and image using a random color. The texture image is computed using the [local binary patterns algorithm](https://en.wikipedia.org/wiki/Local_binary_patterns). Every time that a new texture pattern is aggregated, we display the cumulative texture as an overlay over the original image.
 Note that there are a few parameters that could be tuned in order to get different results
 ```python
 th: float = 1 / 255.0 # Controls the threshold for the neighbors
@@ -92,3 +92,20 @@ Example images:
 ![test_2_gol.gif](/data/test_2_lbp.gif)
 ![test_3_gol.gif](/data/test_3_lbp.gif)
 ![test_4_gol.gif](/data/test_4_lbp.gif)
+
+## Random colors over segments
+Random colors is inspired by [pop art culture](https://en.wikipedia.org/wiki/Pop_art). This algorithm tries to show different combinations of colors that would recreate an image in this particular art style using image processing and then combining them into an animated gif. Careful do not use very high fps if you suffer of any visual impairments and/or epilepsy (In general 1 fps is the best experience).
+
+Note that there are a few parameters that could be tuned in order to get different results
+```python
+wsize: int = 5 # Controls the window size of the neighborhood
+num_smooth: int = 5 # How many iterations to apply during the initial smoothing process
+```
+
+Example images:
+
+![test_0_gol.gif](/data/test_0_rs.gif)
+![test_1_gol.gif](/data/test_1_rs.gif)
+![test_2_gol.gif](/data/test_2_rs.gif)
+![test_3_gol.gif](/data/test_3_rs.gif)
+![test_4_gol.gif](/data/test_4_rs.gif)
