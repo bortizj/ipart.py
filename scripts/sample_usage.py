@@ -15,14 +15,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 author: Benhur Ortiz-Jaramillo
 """
 
-from ipart.models.game_of_life import GameOfLife
-from ipart.models.lbp import LBP
-from ipart.models.random_segments import RandomSegments
-from ipart import REPO_ROOT
 import time
 
 import cv2
 
+from ipart import REPO_ROOT
+from ipart.models.game_of_life import GameOfLife
+from ipart.models.lbp import LBP
+from ipart.models.random_segments import RandomSegments
 
 PATH_SAMPLES = REPO_ROOT.joinpath(r"data")
 GIF_FPS = 10
