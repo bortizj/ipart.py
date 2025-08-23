@@ -1,0 +1,10 @@
+# requirements.txt
+tqdm
+packaging 
+psutil 
+pandas 
+opencv-python
+numpy
+scipy
+matplotlib
+ruff
