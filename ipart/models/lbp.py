@@ -15,16 +15,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 author: Benhur Ortiz-Jaramillo
 """
 
-import numpy as np
 import cv2
+import numpy as np
 
-from ipart.utils.imgproc import check_and_adjust_image_size
-
-from ipart.utils.tools import GIFVideoMaker
+from ipart import REPO_ROOT, TGT_SIZE
 from ipart.palettes.color_palettes import ColorPalette
-
-from ipart import TGT_SIZE
-from ipart import REPO_ROOT
+from ipart.utils.imgproc import check_and_adjust_image_size
+from ipart.utils.tools import GIFVideoMaker
 
 LBP_FILE = REPO_ROOT.joinpath(r"ipart", r"assets", r"lbp")
 RADII = {1: 8, 1.5: 12}
@@ -82,7 +79,6 @@ class LBP:
             self.img_now = self.img_now.astype("float32") / 255.0
 
     def play(self, path_gif, display: bool = True, play_fps: int = 5, gif_fps: int = 10):
-
         def blend_img(table, lbp_img, img):
             temp = cv2.medianBlur(table[lbp_img.astype("int")].astype("uint8"), 5)
             bgr_lbp = (255 * self.color_palette.lut(temp)).astype("uint8")
@@ -107,8 +103,8 @@ class LBP:
             np.arange(0, self.img_now.shape[0]).astype("float32"),
         )
         for ii in range(self.n):
-            xi = xx - self.r * np.sin(2 * np.pi * ii / self.n)
-            yi = yy + self.r * np.cos(2 * np.pi * ii / self.n)
+            xi = (xx - self.r * np.sin(2 * np.pi * ii / self.n)).astype("float32")
+            yi = (yy + self.r * np.cos(2 * np.pi * ii / self.n)).astype("float32")
 
             # Comparison against neighbor
             img_ii = cv2.remap(self.img_now, xi, yi, cv2.INTER_LINEAR)
@@ -127,7 +123,7 @@ class LBP:
 
             if display:
                 # Displaying the intermediate images
-                cv2.imshow(f"LBP", bgr_lbp)
+                cv2.imshow("LBP", bgr_lbp)
                 cv2.waitKey(int(1000 / play_fps))
 
         # Blending the images
@@ -141,6 +137,6 @@ class LBP:
 
         if display:
             # Displaying the intermediate images
-            cv2.imshow(f"LBP", bgr_lbp)
+            cv2.imshow("LBP", bgr_lbp)
             cv2.waitKey(int(self.n_patterns * 1000 / play_fps))
             cv2.destroyAllWindows()
