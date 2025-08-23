@@ -15,15 +15,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 author: Benhur Ortiz-Jaramillo
 """
 
-from PIL import Image
 import cv2
-
 import numpy as np
+from PIL import Image
 
 
 def get_random_colors(n_colors: int, rng: np.random.Generator):
     def get_clipped_random_color(rng):
-        random_color = np.clip(rng.normal(0, 1, (1, 3)).astype("float32"), -1, 1) * np.array([[70, 120, 120]]).astype("float32")
+        random_color = np.clip(rng.normal(0, 1, (1, 3)).astype("float32"), -1, 1) * np.array([[70, 120, 120]]).astype(
+            "float32"
+        )
         random_color[::, 0] = np.clip(random_color[::, 0], 0, 100)
         return random_color
 

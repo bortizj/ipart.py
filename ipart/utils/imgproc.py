@@ -15,8 +15,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 author: Benhur Ortiz-Jaramillo
 """
 
-import numpy as np
 import cv2
+import numpy as np
 
 
 def check_and_adjust_image_size(in_bgr: np.ndarray, tgt_size: tuple[int, int] = (180, 320)) -> np.ndarray:
