@@ -15,19 +15,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 author: Benhur Ortiz-Jaramillo
 """
 
-import numpy as np
-import cv2
 from pathlib import Path
 
+import cv2
+import numpy as np
 from tqdm import tqdm
-
-from ipart.utils.imgproc import check_and_adjust_image_size
-
-from ipart.utils.tools import GIFVideoMaker
-from ipart.palettes.color_palettes import ColorPalette
 
 # Global constants for the GoL algorithm
 from ipart import TGT_SIZE
+from ipart.palettes.color_palettes import ColorPalette
+from ipart.utils.imgproc import check_and_adjust_image_size
+from ipart.utils.tools import GIFVideoMaker
 
 DEAD_TH: float = 1e-3
 
@@ -213,7 +211,9 @@ class GameOfLife:
         Adds randomness to the image by adding gaussian noise and salt and pepper noise.
         """
         # Adding gaussian noise to the image
-        self.img_now_noisy = self.img_now_noisy + self.rng.normal(0, add_noise[0], self.img_now_noisy.shape).astype("float32")
+        self.img_now_noisy = self.img_now_noisy + self.rng.normal(0, add_noise[0], self.img_now_noisy.shape).astype(
+            "float32"
+        )
 
         # Adding salt and pepper noise
         num_noisy_px = int(add_noise[1] * self.img_now_noisy.size / 2)
@@ -262,7 +262,9 @@ class GameOfLife:
 
         # The randomness of life is added to the pixels that will be born or dead in the next generation
         noise_a = self.rng.normal(0, self.sigma[1], self.img_now_noisy.shape).astype("float32")
-        self.img_now_noisy = self.set_dead_birth_pixels(img_next_n, ex1_nei, noise_a, will_die_due_overpopulation, birth_pixels)
+        self.img_now_noisy = self.set_dead_birth_pixels(
+            img_next_n, ex1_nei, noise_a, will_die_due_overpopulation, birth_pixels
+        )
         self.img_now = self.set_dead_birth_pixels(img_next, ex1_nei, noise_a, will_die_due_overpopulation, birth_pixels)
 
     def set_dead_birth_pixels(

@@ -15,15 +15,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 author: Benhur Ortiz-Jaramillo
 """
 
-import numpy as np
 import cv2
-
-from ipart.utils.imgproc import check_and_adjust_image_size
-
-from ipart.utils.tools import GIFVideoMaker
-from ipart.palettes.color_palettes import ColorPalette
+import numpy as np
 
 from ipart import TGT_SIZE
+from ipart.palettes.color_palettes import ColorPalette
+from ipart.utils.imgproc import check_and_adjust_image_size
+from ipart.utils.tools import GIFVideoMaker
 
 
 class RandomSegments:
@@ -77,7 +75,9 @@ class RandomSegments:
 
         # Creating an image where each cluster is represented by a random color (dead state)
         pixels = self.img_now.reshape((-1, 3)).astype(np.float32)
-        _, self.labels, self.colors = cv2.kmeans(pixels, self.color_palette[1], None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+        _, self.labels, self.colors = cv2.kmeans(
+            pixels, self.color_palette[1], None, criteria, 10, cv2.KMEANS_PP_CENTERS
+        )
 
     def play(self, path_gif, display: bool = True, len_sec: float = 5.0, play_fps: int = 5, gif_fps: int = 10):
         """
@@ -91,7 +91,7 @@ class RandomSegments:
         self.img_now = self.colors[self.labels.astype("int")].reshape(self.img_now.shape)
         temp_ = cv2.cvtColor(self.img_now, cv2.COLOR_Lab2BGR)
         if display:
-            cv2.imshow(f"Random segments", temp_)
+            cv2.imshow("Random segments", temp_)
             cv2.waitKey(int(1000 / play_fps))
 
         # Appends the current generation image to the gif
@@ -104,7 +104,7 @@ class RandomSegments:
             self.img_now_rand = cv2.cvtColor(cp.lut(self.labels).reshape(self.img_now.shape), cv2.COLOR_BGR2Lab)
             temp = cv2.cvtColor(self.img_now_rand, cv2.COLOR_Lab2BGR)
             if display:
-                cv2.imshow(f"Random segments", temp)
+                cv2.imshow("Random segments", temp)
                 cv2.waitKey(int(1000 / play_fps))
 
             # Appends the current generation image to the gif
