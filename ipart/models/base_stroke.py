@@ -31,10 +31,12 @@ from ipart.utils.tools import GIFVideoMaker
 
 def make_gaussian_color_in_block(blk_labels: np.ndarray, cp: ColorPalette) -> np.ndarray:
     # Making a Gaussian kernel
-    sigma = (blk_labels.shape[0] - 1) / 1.0
-    gauss_kernel = cv2.getGaussianKernel(blk_labels.shape[0], sigma=sigma)
+    wsize = max(blk_labels.shape[0], blk_labels.shape[1])
+    sigma = (wsize - 1) / 2.0
+    gauss_kernel = cv2.getGaussianKernel(wsize, sigma=sigma)
     gauss_kernel = gauss_kernel * gauss_kernel.T
     gauss_kernel = gauss_kernel[:, :, np.newaxis] / gauss_kernel.max()
+    gauss_kernel = gauss_kernel[: blk_labels.shape[0], : blk_labels.shape[1]]
 
     # Getting the mos common color in the block
     counts = np.bincount(blk_labels.flatten())
@@ -49,12 +51,6 @@ def make_gaussian_color_in_block(blk_labels: np.ndarray, cp: ColorPalette) -> np
 
 
 def make_circle_in_block(blk_labels: np.ndarray, cp: ColorPalette) -> np.ndarray:
-    # Making a Gaussian kernel
-    sigma = (blk_labels.shape[0] - 1) / 1.0
-    gauss_kernel = cv2.getGaussianKernel(blk_labels.shape[0], sigma=sigma)
-    gauss_kernel = gauss_kernel * gauss_kernel.T
-    gauss_kernel = gauss_kernel[:, :, np.newaxis] / gauss_kernel.max()
-
     # Getting the mos common color in the block
     counts = np.bincount(blk_labels.flatten())
     color_id = int(np.argmax(counts))
@@ -81,7 +77,7 @@ class BaseStroke:
         self,
         in_bgr: Path,
         func: Callable[[np.ndarray], np.ndarray],
-        wsize: int = 21,
+        wsize: int = 13,
         overlap_factor: float = 0.0,
         color_palette: tuple[str, int] = ("kaggle", 24),
         rng_seed: int = 42,
@@ -109,7 +105,7 @@ class BaseStroke:
         self.img_now = self.img_now.astype("float32") / 255.0
 
         # Converting the image to Lab color space
-        self.img_now = cv2.cvtColor(self.img_now, cv2.COLOR_BGR2Lab)
+        self.img_process = cv2.cvtColor(self.img_now, cv2.COLOR_BGR2Lab)
 
         # Filtering the image into homogeneous color regions (preserving color)
         self.segment_image()
@@ -121,19 +117,19 @@ class BaseStroke:
             self.cp = ColorPalette(self.rng, n_colors=self.color_palette[1], color_palette=self.color_palette[0])
 
         # getting the image in the given color palette
-        self.img_now = self.cp.lut(self.labels).reshape(self.img_now.shape)
-        self.img_strokes = self.img_now.copy()
-        self.labels = self.labels.reshape(self.img_now.shape[0:2])
+        self.img_process = self.cp.lut(self.labels).reshape(self.img_process.shape)
+        self.img_strokes = self.img_process.copy()
+        self.labels = self.labels.reshape(self.img_process.shape[0:2])
 
     def segment_image(self):
         # Filtering the image to get the average of the neighborhood per channel
-        self.img_now = cv2.filter2D(self.img_now, -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
+        self.img_process = cv2.filter2D(self.img_process, -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
 
         # Define criteria for kmeans
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
 
         # Creating an image where each cluster is represented by a random color
-        pixels = self.img_now.reshape((-1, 3)).astype(np.float32)
+        pixels = self.img_process.reshape((-1, 3)).astype(np.float32)
         _, self.labels, self.colors = cv2.kmeans(
             pixels, self.color_palette[1], None, criteria, 10, cv2.KMEANS_PP_CENTERS
         )
@@ -149,7 +145,7 @@ class BaseStroke:
             gif = None
 
         # Getting image and block sizes
-        n_rows, n_cols, __ = self.img_now.shape
+        n_rows, n_cols, __ = self.img_process.shape
         hwsize = int(self.wsize / 2)
 
         # A value between 0 (no overlap) and 1 (100% overlap).
@@ -157,24 +153,28 @@ class BaseStroke:
         if step_size == 0:
             step_size = 1
 
-        tqdm_loop_ii = tqdm(range(hwsize, n_rows - hwsize + 1, step_size), desc="Basic stroke row", ncols=100)
-        tqdm_loop_jj = tqdm(range(hwsize, n_cols - hwsize + 1, step_size), desc="Basic stroke col", ncols=100)
+        tqdm_loop_ii = tqdm(range(hwsize, n_rows - hwsize + step_size, step_size), desc="Basic stroke row", ncols=100)
+        tqdm_loop_jj = tqdm(range(hwsize, n_cols - hwsize + step_size, step_size), desc="Basic stroke col", ncols=100)
 
         for ii in tqdm_loop_ii:
             for jj in tqdm_loop_jj:
+                # Checking that we are not outside the image
+                edge_ii = min(ii + hwsize + 1, n_rows)
+                edge_jj = min(jj + hwsize + 1, n_cols)
+
                 # Getting the information of the current block
-                curr_img_strokes = self.img_strokes[ii - hwsize : ii + hwsize + 1, jj - hwsize : jj + hwsize + 1]
+                curr_img_strokes = self.img_strokes[ii - hwsize : edge_ii, jj - hwsize : edge_jj]
                 curr_blk = np.zeros_like(curr_img_strokes)
 
                 # Applying the function to the current block
-                curr_blk_labels = self.labels[ii - hwsize : ii + hwsize + 1, jj - hwsize : jj + hwsize + 1]
+                curr_blk_labels = self.labels[ii - hwsize : edge_ii, jj - hwsize : edge_jj]
                 curr_blk = self.func(curr_blk_labels, self.cp)
 
                 curr_img_strokes = cv2.addWeighted(
                     curr_img_strokes,
-                    0.5,
+                    0.25,
                     curr_blk,
-                    0.5,
+                    1.0,
                     0,
                 )
 

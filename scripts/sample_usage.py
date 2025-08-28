@@ -20,7 +20,7 @@ import time
 import cv2
 
 from ipart import REPO_ROOT
-from ipart.models.base_stroke import BaseStroke, make_circle_in_block
+from ipart.models.base_stroke import BaseStroke, make_circle_in_block, make_gaussian_color_in_block
 from ipart.models.game_of_life import GameOfLife
 from ipart.models.lbp import LBP
 from ipart.models.random_segments import RandomSegments
@@ -40,7 +40,9 @@ if __name__ == "__main__":
         img = cv2.imread(str(path_img))
 
         # Random seed from the current time
-        bs = BaseStroke(path_img, make_circle_in_block, rng_seed=int(time.time()) + 42, color_palette=("same", 24))
+        bs = BaseStroke(
+            path_img, make_gaussian_color_in_block, rng_seed=int(time.time()) + 42, color_palette=("kaggle", 24)
+        )
         # TODO in base stroke make the class for circles, ellipses, squares, rectangles, and any given character the
         # shape / character is plotted in the block centered at the block and with angle to the gradient
         bs.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
@@ -49,4 +51,24 @@ if __name__ == "__main__":
         # rs = RandomSegments(path_img, rng_seed=int(time.time()) + 42)
         # lbp.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
         # gol.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
         # rs.play(None, play_fps=DISP_FPS, gif_fps=1)
