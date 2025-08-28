@@ -73,7 +73,7 @@ class RandomSegments:
         # Define criteria for kmeans
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
 
-        # Creating an image where each cluster is represented by a random color (dead state)
+        # Creating an image where each cluster is represented by a random color
         pixels = self.img_now.reshape((-1, 3)).astype(np.float32)
         _, self.labels, self.colors = cv2.kmeans(
             pixels, self.color_palette[1], None, criteria, 10, cv2.KMEANS_PP_CENTERS
