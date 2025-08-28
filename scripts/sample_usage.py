@@ -18,10 +18,9 @@ author: Benhur Ortiz-Jaramillo
 import time
 
 import cv2
-import numpy as np
 
 from ipart import REPO_ROOT
-from ipart.models.base_stroke import BaseStroke
+from ipart.models.base_stroke import BaseStroke, make_circle_in_block
 from ipart.models.game_of_life import GameOfLife
 from ipart.models.lbp import LBP
 from ipart.models.random_segments import RandomSegments
@@ -29,10 +28,6 @@ from ipart.models.random_segments import RandomSegments
 PATH_SAMPLES = REPO_ROOT.joinpath(r"data")
 GIF_FPS = 10
 DISP_FPS = 10
-
-
-def fun(blk):
-    return np.ones_like(blk) * blk.mean(axis=(0, 1), keepdims=True)
 
 
 if __name__ == "__main__":
@@ -45,11 +40,13 @@ if __name__ == "__main__":
         img = cv2.imread(str(path_img))
 
         # Random seed from the current time
-        bs = BaseStroke(path_img, fun, rng_seed=int(time.time()) + 42)
+        bs = BaseStroke(path_img, make_circle_in_block, rng_seed=int(time.time()) + 42, color_palette=("same", 24))
+        # TODO in base stroke make the class for circles, ellipses, squares, rectangles, and any given character the
+        # shape / character is plotted in the block centered at the block and with angle to the gradient
         bs.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
-        gol = GameOfLife(path_img, rng_seed=int(time.time()) + 42)
-        lbp = LBP(path_img, rng_seed=int(time.time()) + 42)
-        rs = RandomSegments(path_img, rng_seed=int(time.time()) + 42)
-        lbp.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
-        gol.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
-        rs.play(None, play_fps=DISP_FPS, gif_fps=1)
+        # gol = GameOfLife(path_img, rng_seed=int(time.time()) + 42)
+        # lbp = LBP(path_img, rng_seed=int(time.time()) + 42)
+        # rs = RandomSegments(path_img, rng_seed=int(time.time()) + 42)
+        # lbp.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
+        # gol.play(None, play_fps=DISP_FPS, gif_fps=GIF_FPS)
+        # rs.play(None, play_fps=DISP_FPS, gif_fps=1)

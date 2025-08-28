@@ -31,7 +31,7 @@ class ColorPalette:
     """
 
     def __init__(
-        self, rng: np.random.Generator, color_palette: str | np.ndarray = "kaggle", n_colors: int | None = 100
+        self, rng: np.random.Generator | None, color_palette: str | np.ndarray = "kaggle", n_colors: int | None = 100
     ):
         # Getting the list of colors from file or random generator
         if isinstance(color_palette, str):

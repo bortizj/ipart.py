@@ -29,6 +29,49 @@ from ipart.utils.imgproc import check_and_adjust_image_size
 from ipart.utils.tools import GIFVideoMaker
 
 
+def make_gaussian_color_in_block(blk_labels: np.ndarray, cp: ColorPalette) -> np.ndarray:
+    # Making a Gaussian kernel
+    sigma = (blk_labels.shape[0] - 1) / 1.0
+    gauss_kernel = cv2.getGaussianKernel(blk_labels.shape[0], sigma=sigma)
+    gauss_kernel = gauss_kernel * gauss_kernel.T
+    gauss_kernel = gauss_kernel[:, :, np.newaxis] / gauss_kernel.max()
+
+    # Getting the mos common color in the block
+    counts = np.bincount(blk_labels.flatten())
+    color_id = int(np.argmax(counts))
+
+    # Making the color a gradient using the Gaussian shape
+    blk_circle = color_id * np.ones_like(blk_labels)
+    blk_circle = cp.lut(blk_circle)
+    blk_circle = (blk_circle * gauss_kernel).astype("float32")
+
+    return blk_circle
+
+
+def make_circle_in_block(blk_labels: np.ndarray, cp: ColorPalette) -> np.ndarray:
+    # Making a Gaussian kernel
+    sigma = (blk_labels.shape[0] - 1) / 1.0
+    gauss_kernel = cv2.getGaussianKernel(blk_labels.shape[0], sigma=sigma)
+    gauss_kernel = gauss_kernel * gauss_kernel.T
+    gauss_kernel = gauss_kernel[:, :, np.newaxis] / gauss_kernel.max()
+
+    # Getting the mos common color in the block
+    counts = np.bincount(blk_labels.flatten())
+    color_id = int(np.argmax(counts))
+
+    # Making the color a gradient using the Gaussian shape
+    cv2.circle(
+        blk_labels,
+        (int(blk_labels.shape[1] / 2), int(blk_labels.shape[0] / 2)),
+        int(blk_labels.shape[0] / 2),
+        color_id,
+        -1,
+    )
+    blk_circle = cp.lut(blk_labels)
+
+    return blk_circle
+
+
 class BaseStroke:
     """
     Base class for stroke-based image processing.
@@ -39,20 +82,25 @@ class BaseStroke:
         in_bgr: Path,
         func: Callable[[np.ndarray], np.ndarray],
         wsize: int = 21,
-        overlap_factor: float = 0.5,
-        color_palette: str = "kaggle",
+        overlap_factor: float = 0.0,
+        color_palette: tuple[str, int] = ("kaggle", 24),
         rng_seed: int = 42,
     ):
         # Create a random number generator with a seed, adds "predictable" uncertainty to the algorithm
         self.rng = np.random.default_rng(seed=rng_seed)
 
-        # Reading the image from the given path
-        self.in_bgr = cv2.imread(str(in_bgr))
-
-        # Getting the settings of the algorithm
+        # Settings of the algorithm
         self.wsize = wsize
+        self.color_palette = color_palette
         self.overlap_factor = overlap_factor
         self.func = func
+
+        # Creating the necessary kernel for the calculations
+        self.kernel = np.ones((self.wsize, self.wsize)).astype("float32")
+        self.kernel = self.kernel / (self.wsize**2)
+
+        # Reading the image from the given path
+        self.in_bgr = cv2.imread(str(in_bgr))
 
         # Resizing the image for computational efficiency
         self.img_now = check_and_adjust_image_size(self.in_bgr, tgt_size=TGT_SIZE)
@@ -60,9 +108,36 @@ class BaseStroke:
         # Normalizing the image between 0 and 1
         self.img_now = self.img_now.astype("float32") / 255.0
 
-        # Creating the color palette for the algorithm
-        self.color_palette = ColorPalette(self.rng, n_colors=None, color_palette=color_palette)
-        self.n_colors = self.color_palette.n_colors
+        # Converting the image to Lab color space
+        self.img_now = cv2.cvtColor(self.img_now, cv2.COLOR_BGR2Lab)
+
+        # Filtering the image into homogeneous color regions (preserving color)
+        self.segment_image()
+
+        # Getting the color palette for the image
+        if self.color_palette[0] == "same":
+            self.cp = ColorPalette(self.rng, color_palette=self.colors)
+        else:
+            self.cp = ColorPalette(self.rng, n_colors=self.color_palette[1], color_palette=self.color_palette[0])
+
+        # getting the image in the given color palette
+        self.img_now = self.cp.lut(self.labels).reshape(self.img_now.shape)
+        self.img_strokes = self.img_now.copy()
+        self.labels = self.labels.reshape(self.img_now.shape[0:2])
+
+    def segment_image(self):
+        # Filtering the image to get the average of the neighborhood per channel
+        self.img_now = cv2.filter2D(self.img_now, -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
+
+        # Define criteria for kmeans
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
+
+        # Creating an image where each cluster is represented by a random color
+        pixels = self.img_now.reshape((-1, 3)).astype(np.float32)
+        _, self.labels, self.colors = cv2.kmeans(
+            pixels, self.color_palette[1], None, criteria, 10, cv2.KMEANS_PP_CENTERS
+        )
+        self.colors = cv2.cvtColor(self.colors[np.newaxis, ::], cv2.COLOR_Lab2BGR)[0, ::]
 
     def play(self, path_gif, display: bool = True, play_fps: int = 60, gif_fps: int = 10):
         """
@@ -72,9 +147,6 @@ class BaseStroke:
             gif = GIFVideoMaker(str(path_gif), duration=int(1000 / gif_fps))
         else:
             gif = None
-
-        # Making a copy of the current image
-        img_copy = self.img_now.copy()
 
         # Getting image and block sizes
         n_rows, n_cols, __ = self.img_now.shape
@@ -90,10 +162,26 @@ class BaseStroke:
 
         for ii in tqdm_loop_ii:
             for jj in tqdm_loop_jj:
+                # Getting the information of the current block
+                curr_img_strokes = self.img_strokes[ii - hwsize : ii + hwsize + 1, jj - hwsize : jj + hwsize + 1]
+                curr_blk = np.zeros_like(curr_img_strokes)
+
                 # Applying the function to the current block
-                curr_blk = img_copy[ii - hwsize : ii + hwsize + 1, jj - hwsize : jj + hwsize + 1]
-                curr_blk = self.func(curr_blk)
-                self.img_now[ii - hwsize : ii + hwsize + 1, jj - hwsize : jj + hwsize + 1] = curr_blk
+                curr_blk_labels = self.labels[ii - hwsize : ii + hwsize + 1, jj - hwsize : jj + hwsize + 1]
+                curr_blk = self.func(curr_blk_labels, self.cp)
+
+                curr_img_strokes = cv2.addWeighted(
+                    curr_img_strokes,
+                    0.5,
+                    curr_blk,
+                    0.5,
+                    0,
+                )
+
+                # Trying to clean the black border
+                # curr_img_strokes[np.where(curr_blk_labels != -1)] = curr_img_strokes.mean(axis=(0, 1), keepdims=True)
+                self.img_strokes[ii - hwsize : ii + hwsize + 1, jj - hwsize : jj + hwsize + 1] = curr_img_strokes.copy()
+                self.img_now[ii - hwsize : ii + hwsize + 1, jj - hwsize : jj + hwsize + 1] = curr_img_strokes.copy()
 
                 # Appends the current generation image to the gif
                 if gif is not None:
