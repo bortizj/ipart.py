@@ -121,7 +121,26 @@ class BaseStroke:
         self.img_strokes = self.img_process.copy()
         self.labels = self.labels.reshape(self.img_process.shape[0:2])
 
+    def compute_image_gradient(self):
+        """
+        Computes the gradient of the image.
+        """
+        # TODO: Here get the local gradient patches that will be applied to the strokes
+        self.img_gradient = cv2.Sobel(self.img_process, cv2.CV_64F, 1, 1, ksize=5)
+        self.img_gradient = cv2.convertScaleAbs(self.img_gradient)
+
+    def compute_image_texture(self):
+        """
+        Computes the texture of the image.
+        """
+        # TODO: Here get the local texture patches that will be applied to the strokes
+        self.img_texture = cv2.Laplacian(self.img_process, cv2.CV_64F)
+        self.img_texture = cv2.convertScaleAbs(self.img_texture)
+
     def segment_image(self):
+        """
+        Segments the image into homogeneous color regions.
+        """
         # Filtering the image to get the average of the neighborhood per channel
         self.img_process = cv2.filter2D(self.img_process, -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
 
