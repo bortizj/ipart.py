@@ -63,7 +63,7 @@ class GIFVideoMaker:
         self.duration = duration
         self.frames = []
 
-    def append_frame(self, frame: str):
+    def append_frame(self, frame: np.ndarray):
         """
         Append a frame to the gif video.
         """

@@ -23,6 +23,8 @@ from ipart.palettes.color_palettes import ColorPalette
 from ipart.utils.imgproc import check_and_adjust_image_size
 from ipart.utils.tools import GIFVideoMaker
 
+from pathlib import Path
+
 LBP_FILE = REPO_ROOT.joinpath(r"ipart", r"assets", r"lbp")
 RADII = {1: 8, 1.5: 12}
 LINE_MAP = {8: 0, 12: 1}
@@ -39,7 +41,7 @@ class LBP:
 
     def __init__(
         self,
-        in_bgr: str,
+        in_bgr: Path,
         r: float = 1.5,
         th: float = 10 / 255.0,
         rng_seed: int = 42,
@@ -54,6 +56,10 @@ class LBP:
 
         # Reading the image from the given path
         self.in_bgr = cv2.imread(str(in_bgr))
+
+        if self.in_bgr is None:
+            print("ERROR: Not possible to read image!")
+            return
 
         # Resizing the image for computational efficiency
         self.img_now = check_and_adjust_image_size(self.in_bgr, tgt_size=TGT_SIZE)

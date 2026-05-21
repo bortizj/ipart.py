@@ -94,6 +94,10 @@ class GameOfLife:
         # Reading the image from the given path
         self.in_bgr = cv2.imread(str(in_bgr))
 
+        if self.in_bgr is None:
+            print("ERROR: Not possible to read image!")
+            return
+
         # Resizing the image for computational efficiency
         self.img_now = check_and_adjust_image_size(self.in_bgr, tgt_size=TGT_SIZE)
 
@@ -133,7 +137,7 @@ class GameOfLife:
             cv2.destroyAllWindows()
 
         # Storing all the generations in a gif
-        if path_gif is not None:
+        if gif is not None:
             gif.make_gif_video()
 
     def loop(self, gif, num_generations: int = 500, display: bool = True, play_fps: int = 60):
@@ -182,12 +186,12 @@ class GameOfLife:
                 if diff_ratios.size > 0:
                     tqdm_loop.set_postfix(diff_ratio=diff_ratios[-1])
 
-    def measure_generational_error(self):
+    def measure_generational_error(self) -> float:
         """
         Measures the generational error of the algorithm by comparing the current generation with the reference image.
         """
         # Computing deltaE between the current generation and the reference image
-        deltaE = cv2.sqrt(np.sum(cv2.pow(self.img_now_noisy - self.img_ref, 2), axis=2))
+        deltaE = cv2.sqrt(np.sum(np.power(self.img_now_noisy - self.img_ref, 2), axis=2))
 
         return np.mean(deltaE)
 
@@ -202,7 +206,8 @@ class GameOfLife:
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
 
         # Creating an image where each cluster is represented by a random color (dead state)
-        _, labels, __ = cv2.kmeans(pixels, self.ncolors, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+        best_labels = np.zeros((pixels.shape[0], 1), dtype="int32")
+        _, labels, __ = cv2.kmeans(pixels, self.ncolors, best_labels, criteria, 10, cv2.KMEANS_PP_CENTERS)
         self.img_rand = self.color_palette.lut(labels).reshape(self.img_now_noisy.shape)
         self.img_rand = cv2.cvtColor(self.img_rand, cv2.COLOR_BGR2Lab)
 
@@ -242,17 +247,17 @@ class GameOfLife:
 
         # Filtering the image to get the average of the neighborhood per channel
         ex1_nei = cv2.filter2D(self.img_now_noisy, -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
-        ex2_nei = cv2.filter2D(cv2.pow(self.img_now_noisy, 2), -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
+        ex2_nei = cv2.filter2D(np.power(self.img_now_noisy, 2), -1, self.kernel, borderType=cv2.BORDER_REFLECT101)
 
         # Verifying if the pixel will be alive or not:
         # the pixel is alive if is similar to the neighborhood |pixel - avg_n| <= mu
         # here the distance will be euclidean in the given color space
-        deltaE_nei = cv2.sqrt(np.sum(cv2.pow(self.img_now_noisy - ex1_nei, 2), axis=2))
+        deltaE_nei = np.sqrt(np.sum(np.power(self.img_now_noisy - ex1_nei, 2), axis=2))
         will_die_due_difference = deltaE_nei > self.mu
 
         # Verifying if the neighborhood is over or under populated:
         # the neighborhood is overpopulated if the standard deviation of the neighborhood is greater than sigma[1]
-        stdev = np.mean(cv2.sqrt(ex2_nei - cv2.pow(ex1_nei, 2)), axis=2)
+        stdev = np.mean(np.sqrt(ex2_nei - np.power(ex1_nei, 2)), axis=2)
         underpopulated = stdev < self.sigma[0]
         will_die_due_overpopulation = stdev > self.sigma[1]
 

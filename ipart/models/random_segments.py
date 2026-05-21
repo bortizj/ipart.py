@@ -23,6 +23,8 @@ from ipart.palettes.color_palettes import ColorPalette
 from ipart.utils.imgproc import check_and_adjust_image_size
 from ipart.utils.tools import GIFVideoMaker
 
+from pathlib import Path
+
 
 class RandomSegments:
     """
@@ -31,7 +33,7 @@ class RandomSegments:
 
     def __init__(
         self,
-        in_bgr: str,
+        in_bgr: Path,
         wsize: int = 7,
         num_smooth: int = 5,
         rng_seed: int = 42,
@@ -51,6 +53,10 @@ class RandomSegments:
 
         # Reading the image from the given path
         self.in_bgr = cv2.imread(str(in_bgr))
+
+        if self.in_bgr is None:
+            print("ERROR: Not possible to read image!")
+            return
 
         # Resizing the image for computational efficiency
         self.img_now = check_and_adjust_image_size(self.in_bgr, tgt_size=TGT_SIZE)
@@ -75,8 +81,9 @@ class RandomSegments:
 
         # Creating an image where each cluster is represented by a random color
         pixels = self.img_now.reshape((-1, 3)).astype(np.float32)
+        best_labels = np.zeros((pixels.shape[0], 1), dtype="int32")
         _, self.labels, self.colors = cv2.kmeans(
-            pixels, self.color_palette[1], None, criteria, 10, cv2.KMEANS_PP_CENTERS
+            pixels, self.color_palette[1], best_labels, criteria, 10, cv2.KMEANS_PP_CENTERS
         )
 
     def play(self, path_gif, display: bool = True, len_sec: float = 5.0, play_fps: int = 5, gif_fps: int = 10):
@@ -119,5 +126,5 @@ class RandomSegments:
             cv2.destroyAllWindows()
 
         # Storing all the generations in a gif
-        if path_gif is not None:
+        if gif is not None:
             gif.make_gif_video()

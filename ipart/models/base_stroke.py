@@ -76,7 +76,7 @@ class BaseStroke:
     def __init__(
         self,
         in_bgr: Path,
-        func: Callable[[np.ndarray], np.ndarray],
+        func: Callable[[np.ndarray, ColorPalette], np.ndarray],
         wsize: int = 13,
         overlap_factor: float = 0.0,
         color_palette: tuple[str, int] = ("kaggle", 24),
@@ -97,6 +97,10 @@ class BaseStroke:
 
         # Reading the image from the given path
         self.in_bgr = cv2.imread(str(in_bgr))
+
+        if self.in_bgr is None:
+            print("ERROR: Not possible to read image!")
+            return
 
         # Resizing the image for computational efficiency
         self.img_now = check_and_adjust_image_size(self.in_bgr, tgt_size=TGT_SIZE)
@@ -148,9 +152,11 @@ class BaseStroke:
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
 
         # Creating an image where each cluster is represented by a random color
-        pixels = self.img_process.reshape((-1, 3)).astype(np.float32)
+        pixels = self.img_process.reshape((-1, 3)).astype("float32")
+
+        best_labels = np.zeros((pixels.shape[0], 1), dtype="int32")
         _, self.labels, self.colors = cv2.kmeans(
-            pixels, self.color_palette[1], None, criteria, 10, cv2.KMEANS_PP_CENTERS
+            pixels, self.color_palette[1], best_labels, criteria, 10, cv2.KMEANS_PP_CENTERS
         )
         self.colors = cv2.cvtColor(self.colors[np.newaxis, ::], cv2.COLOR_Lab2BGR)[0, ::]
 
@@ -216,5 +222,5 @@ class BaseStroke:
             cv2.destroyAllWindows()
 
         # Storing all the generations in a gif
-        if path_gif is not None:
+        if gif is not None:
             gif.make_gif_video()
