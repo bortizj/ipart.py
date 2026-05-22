@@ -45,7 +45,7 @@ class LBP:
         r: float = 1.5,
         th: float = 10 / 255.0,
         rng_seed: int = 42,
-        color_palette: str = "neon",
+        palette_name: str = "neon",
     ):
         # Create a random number generator with a seed, adds "predictable" uncertainty to the algorithm
         self.rng = np.random.default_rng(seed=rng_seed)
@@ -76,7 +76,7 @@ class LBP:
 
         self.n_patterns = len(np.unique(self.table))
 
-        self.color_palette = ColorPalette(self.rng, n_colors=self.n_patterns, color_palette=color_palette)
+        self.color_palette = ColorPalette(self.rng, n_colors=self.n_patterns, palette_name=palette_name)
 
         # If the image is BGR then we convert it to grayscale
         if len(self.img_now.shape) > 2:

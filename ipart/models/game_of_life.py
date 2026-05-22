@@ -68,7 +68,7 @@ class GameOfLife:
         mu: float = 3,
         sigma: tuple[float, float] = (5, 15),
         add_noise: tuple[float, float] = (10 / 255, 0.04),
-        color_palette: tuple[str, int] = ("kaggle", 24),
+        cp_settings: tuple[str, int | None] = ("kaggle", 24),
         uses_median_blur: bool = True,
         rng_seed: int = 42,
     ):
@@ -83,8 +83,7 @@ class GameOfLife:
         self.uses_median_blur = uses_median_blur
 
         # Creating the color palette for the algorithm
-        self.ncolors = color_palette[1]
-        self.color_palette = ColorPalette(self.rng, n_colors=color_palette[1], color_palette=color_palette[0])
+        self.cp = ColorPalette(self.rng, n_colors=cp_settings[1], palette_name=cp_settings[0])
 
         # Creating the necessary kernel for the calculations
         self.kernel = np.ones((self.wsize, self.wsize)).astype("float32")
@@ -207,8 +206,8 @@ class GameOfLife:
 
         # Creating an image where each cluster is represented by a random color (dead state)
         best_labels = np.zeros((pixels.shape[0], 1), dtype="int32")
-        _, labels, __ = cv2.kmeans(pixels, self.ncolors, best_labels, criteria, 10, cv2.KMEANS_PP_CENTERS)
-        self.img_rand = self.color_palette.lut(labels).reshape(self.img_now_noisy.shape)
+        _, labels, __ = cv2.kmeans(pixels, self.cp.n_colors, best_labels, criteria, 10, cv2.KMEANS_PP_CENTERS)
+        self.img_rand = self.cp.lut(labels).reshape(self.img_now_noisy.shape)
         self.img_rand = cv2.cvtColor(self.img_rand, cv2.COLOR_BGR2Lab)
 
     def add_randomness(self, add_noise: tuple[float, float]):

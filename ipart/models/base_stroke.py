@@ -79,7 +79,7 @@ class BaseStroke:
         func: Callable[[np.ndarray, ColorPalette], np.ndarray],
         wsize: int = 13,
         overlap_factor: float = 0.0,
-        color_palette: tuple[str, int] = ("kaggle", 24),
+        cp_settings: tuple[str, int | None] = ("kaggle", 24),
         rng_seed: int = 42,
     ):
         # Create a random number generator with a seed, adds "predictable" uncertainty to the algorithm
@@ -87,7 +87,7 @@ class BaseStroke:
 
         # Settings of the algorithm
         self.wsize = wsize
-        self.color_palette = color_palette
+        self.cp_settings = cp_settings
         self.overlap_factor = overlap_factor
         self.func = func
 
@@ -111,14 +111,14 @@ class BaseStroke:
         # Converting the image to Lab color space
         self.img_process = cv2.cvtColor(self.img_now, cv2.COLOR_BGR2Lab)
 
+        # Getting the number of colors with an initial color palette to be used in the algorithm
+        cp = ColorPalette(self.rng, n_colors=self.cp_settings[1], palette_name=self.cp_settings[0])
+
         # Filtering the image into homogeneous color regions (preserving color)
-        self.segment_image()
+        self.segment_image(cp.n_colors)
 
         # Getting the color palette for the image
-        if self.color_palette[0] == "same":
-            self.cp = ColorPalette(self.rng, color_palette=self.colors)
-        else:
-            self.cp = ColorPalette(self.rng, n_colors=self.color_palette[1], color_palette=self.color_palette[0])
+        self.cp = ColorPalette(self.rng, n_colors=self.cp_settings[1], palette_name=self.cp_settings[0], colors=self.colors)
 
         # getting the image in the given color palette
         self.img_process = self.cp.lut(self.labels).reshape(self.img_process.shape)
@@ -141,7 +141,7 @@ class BaseStroke:
         self.img_texture = cv2.Laplacian(self.img_process, cv2.CV_64F)
         self.img_texture = cv2.convertScaleAbs(self.img_texture)
 
-    def segment_image(self):
+    def segment_image(self, n_colors: int):
         """
         Segments the image into homogeneous color regions.
         """
@@ -156,7 +156,7 @@ class BaseStroke:
 
         best_labels = np.zeros((pixels.shape[0], 1), dtype="int32")
         _, self.labels, self.colors = cv2.kmeans(
-            pixels, self.color_palette[1], best_labels, criteria, 10, cv2.KMEANS_PP_CENTERS
+            pixels, n_colors, best_labels, criteria, 10, cv2.KMEANS_PP_CENTERS
         )
         self.colors = cv2.cvtColor(self.colors[np.newaxis, ::], cv2.COLOR_Lab2BGR)[0, ::]
 
@@ -217,6 +217,11 @@ class BaseStroke:
                     cv2.imshow("Strokes", self.img_now)
                     cv2.waitKey(int(1000 / play_fps))
 
+        
+        self.img_now = cv2.medianBlur(self.img_now, 5)
+        cv2.imshow("Strokes", self.img_now)
+        cv2.waitKey(0)
+        
         # Destroying the display window
         if display:
             cv2.destroyAllWindows()

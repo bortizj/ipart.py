@@ -31,41 +31,40 @@ class ColorPalette:
     """
 
     def __init__(
-        self, rng: np.random.Generator, color_palette: str | np.ndarray = "kaggle", n_colors: int | None = 100
+        self, rng: np.random.Generator, palette_name: str = "kaggle", n_colors: int | None = 32, colors: np.ndarray = np.array([])
     ):
         # Getting the list of colors from file or random generator
-        if isinstance(color_palette, str):
-            if color_palette == "random":
-                if n_colors is None:
-                    n_colors = 100
+        if palette_name in ["random", "same"]:
+            n_colors = n_colors if n_colors is not None else 32
+            if palette_name == "random":
                 rgb_code = rng.integers(0, 255, (n_colors, 3))
             else:
-                if color_palette == "dmc":
-                    __, rgb_code, __ = _get_dmc_colors()
-                elif color_palette == "kaggle":
-                    rgb_code, __ = _get_kaggle_colors()
-                elif color_palette == "neon":
-                    rgb_code = _get_neon_colors()
+                if colors.size == 0:
+                    rgb_code = rng.integers(0, 255, (n_colors, 3))
                 else:
-                    raise ValueError(f"Unknown color palette: {color_palette}")
-                # Selecting the colors from the file
-                if n_colors is None:
+                    rgb_code = colors[::, ::-1]
                     n_colors = rgb_code.shape[0]
-                if n_colors > rgb_code.shape[0]:
-                    n_colors = rgb_code.shape[0]
-
-                # Even if selecting the whole vector we still want to shuffle it
-                idx = rng.choice(rgb_code.shape[0], n_colors, replace=False)
-                rgb_code = rgb_code[idx]
-
-            # Normalizing and converting to opencv format
-            self.n_colors = n_colors
-            self.bgr_lut = rgb_code[::, ::-1].astype("float32") / 255.0
-        elif isinstance(color_palette, np.ndarray):
-            self.n_colors = color_palette.shape[0]
-            self.bgr_lut = color_palette.copy()
         else:
-            raise ValueError(f"Unknown color palette type: {type(color_palette)}")
+            if palette_name == "dmc":
+                __, rgb_code, __ = _get_dmc_colors()
+            elif palette_name == "kaggle":
+                rgb_code, __ = _get_kaggle_colors()
+            elif palette_name == "neon":
+                rgb_code = _get_neon_colors()
+            else:
+                raise ValueError(f"Unknown color palette: {palette_name}")
+
+            # Selecting the colors from the file
+            n_colors = rgb_code.shape[0] if n_colors is None else n_colors
+            n_colors = min(n_colors, rgb_code.shape[0])
+
+            # Even if selecting the whole vector we still want to shuffle it
+            idx = rng.choice(rgb_code.shape[0], n_colors, replace=False)
+            rgb_code = rgb_code[idx]
+
+        # Normalizing and converting to opencv format
+        self.n_colors = n_colors
+        self.bgr_lut = rgb_code[::, ::-1].astype("float32") / 255.0
 
     def lut(self, img: np.ndarray) -> np.ndarray:
         """

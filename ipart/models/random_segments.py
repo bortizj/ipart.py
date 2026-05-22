@@ -37,14 +37,14 @@ class RandomSegments:
         wsize: int = 7,
         num_smooth: int = 5,
         rng_seed: int = 42,
-        color_palette: tuple[str, int] = ("kaggle", 24),
+        cp_settings: tuple[str, int | None] = ("kaggle", 24),
     ):
         # Create a random number generator with a seed, adds "predictable" uncertainty to the algorithm
         self.rng = np.random.default_rng(seed=rng_seed)
 
         # Settings of the algorithm
         self.wsize = wsize
-        self.color_palette = color_palette
+        self.cp_settings = cp_settings
 
         # Creating the necessary kernel for the calculations
         self.kernel = np.ones((self.wsize, self.wsize)).astype("float32")
@@ -67,6 +67,10 @@ class RandomSegments:
         # Converting the image to Lab color space
         self.img_now = cv2.cvtColor(self.img_now, cv2.COLOR_BGR2Lab)
 
+        # Creating the firs color palete so we know the actual number of color to be used
+        cp = ColorPalette(self.rng, n_colors=cp_settings[1], palette_name=cp_settings[0])
+        self.n_colors = cp.n_colors
+
         # Filtering the image into homogeneous color regions (preserving color)
         self.segment_image(num_smooth)
 
@@ -83,7 +87,7 @@ class RandomSegments:
         pixels = self.img_now.reshape((-1, 3)).astype(np.float32)
         best_labels = np.zeros((pixels.shape[0], 1), dtype="int32")
         _, self.labels, self.colors = cv2.kmeans(
-            pixels, self.color_palette[1], best_labels, criteria, 10, cv2.KMEANS_PP_CENTERS
+            pixels, self.n_colors, best_labels, criteria, 10, cv2.KMEANS_PP_CENTERS
         )
 
     def play(self, path_gif, display: bool = True, len_sec: float = 5.0, play_fps: int = 5, gif_fps: int = 10):
@@ -107,7 +111,7 @@ class RandomSegments:
 
         for __ in range(int(len_sec * play_fps)):
             # Selecting a new color palette
-            cp = ColorPalette(self.rng, n_colors=self.color_palette[1], color_palette=self.color_palette[0])
+            cp = ColorPalette(self.rng, n_colors=self.cp_settings[1], palette_name=self.cp_settings[0])
             self.img_now_rand = cv2.cvtColor(cp.lut(self.labels).reshape(self.img_now.shape), cv2.COLOR_BGR2Lab)
             temp = cv2.cvtColor(self.img_now_rand, cv2.COLOR_Lab2BGR)
             if display:
